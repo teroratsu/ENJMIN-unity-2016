@@ -7,6 +7,8 @@ public class controller : MonoBehaviour {
     [SerializeField]
     private int baseJumpCount = 1;
     private int jumpCount = 0;
+    [SerializeField]
+    private float maxSpeedY = 10f;//Replace with your max speed
 
     [SerializeField]
     private float baseSpeed = 20f;
@@ -56,6 +58,17 @@ public class controller : MonoBehaviour {
 
         Debug.Log(onGround);
     }
+
+   
+    void FixedUpdate()
+    {
+        if (b.velocity.magnitude > maxSpeedY)
+        {
+            b.velocity = b.velocity.normalized * maxSpeedY;
+        }
+    }
+
+
     void OnCollisionEnter(Collision hit)
     {
         if (hit.gameObject.tag == "Floor")
