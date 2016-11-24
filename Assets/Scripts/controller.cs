@@ -8,8 +8,10 @@ public class controller : MonoBehaviour {
     private int baseJumpCount = 1;
     private int jumpCount = 0;
     [SerializeField]
-    private float maxSpeedY = 10f;//Replace with your max speed
+    private float maxSpeedY = 10f;
 
+    [SerializeField]
+    private float deathZone = 0.05f;
     [SerializeField]
     private float baseSpeed = 20f;
     [SerializeField]
@@ -17,6 +19,8 @@ public class controller : MonoBehaviour {
     private Vector3 moveVec;
     private float inputDir;
 
+    public Animator sAnimator;
+    public GameObject mesh;
     private Rigidbody b;
     private enum Direction
     {
@@ -37,14 +41,31 @@ public class controller : MonoBehaviour {
     {
         if (Input.GetButtonDown("Jump") && jumpCount != 0)
         {
+            sAnimator.SetTrigger("jump");
             b.AddForce(Vector3.up * jumpHeight, ForceMode.Impulse);
             jumpCount -= 1;
         }
         inputDir = Input.GetAxis("Horizontal");
+        sAnimator.SetFloat("hspeed", Mathf.Abs(inputDir));
+        sAnimator.SetFloat("idleTime", Mathf.Abs(Mathf.Sin(Time.time)));
+
         oldDir = newDir;
         newDir = (inputDir < 0) ? Direction.LEFT : Direction.RIGHT;
-        if (newDir != oldDir) b.velocity = new Vector3(0,b.velocity.y,0);
-        b.AddForce(new Vector3(inputDir*Time.deltaTime*baseSpeed,0,0), ForceMode.Impulse);
+        if(newDir != oldDir)
+        {
+            switch(newDir)
+            {
+                case Direction.LEFT: mesh.transform.rotation = Quaternion.Euler(0,-90,0); break;
+                case Direction.RIGHT: mesh.transform.rotation = Quaternion.Euler(0,90,0); break;
+            }
+            b.velocity = new Vector3(0, b.velocity.y, 0);
+        }
+        else if (Mathf.Abs(inputDir) < deathZone)
+            b.velocity = new Vector3(0, b.velocity.y, 0);
+        else
+        {
+            b.AddForce(new Vector3(inputDir * Time.deltaTime * baseSpeed, 0, 0), ForceMode.Impulse);
+        }
         if (transform.eulerAngles.z <= 90 || transform.eulerAngles.z >= 270)
         {
             transform.eulerAngles = Vector3.up;
@@ -53,10 +74,9 @@ public class controller : MonoBehaviour {
         if(!onGround)
         {
             //falling
+            sAnimator.SetFloat("vspeed", Mathf.Abs(b.velocity.normalized.y) + 0.1f);
             b.AddForce(Vector3.down * gravity * Time.deltaTime, ForceMode.Impulse);
         }
-
-        Debug.Log(onGround);
     }
 
    
@@ -67,23 +87,25 @@ public class controller : MonoBehaviour {
             b.velocity = b.velocity.normalized * maxSpeedY;
         }
     }
-
+    
 
     void OnCollisionEnter(Collision hit)
     {
-        if (hit.gameObject.tag == "Floor")
+        if (hit.collider.gameObject.tag == "Floor")
         {
             jumpCount = baseJumpCount;
             onGround = true;
-            b.AddForce(Vector3.up, ForceMode.Impulse);
+            sAnimator.SetBool("land", true);
+            b.AddForce(Vector3.up*b.velocity.y/2 , ForceMode.Impulse);
         }
     }
 
     void OnCollisionExit(Collision hit)
     {
-        if (hit.gameObject.tag == "Floor")
+        if (hit.collider.gameObject.tag == "Floor")
         {
             onGround = false;
+            sAnimator.SetBool("land", false);
         }
     }
 }
